@@ -1,0 +1,9 @@
+flasgger
+Flask
+flask_cors
+flask_sqlalchemy
+passlib
+PyJWT
+SQLAlchemy
+python-dotenv
+flask_login
