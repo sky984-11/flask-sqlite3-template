@@ -1,5 +1,5 @@
-from public.user.auth import *
-from flask import request, jsonify
+from utils.auth import *
+from flask import request
 from db import User
 
 from utils.tools import with_app_context,make_response

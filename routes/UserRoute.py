@@ -1,6 +1,6 @@
 from flask import request
 from db import User,db
-from public.user.auth import generate_token, decode_token
+from utils.auth import generate_token, decode_token
 from config import  BaseConfig
 from utils.tools import with_app_context,make_response
 import random
