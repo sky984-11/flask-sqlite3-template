@@ -53,4 +53,4 @@ def get_token():
       return make_response(405, "密码错误")
 
     encoded_jwt = generate_token(username, password, exp) if exp else generate_token(username, password)
-    return make_response(200, "密码错误",{'token':encoded_jwt})
+    return make_response(200, "成功",{'token':encoded_jwt})

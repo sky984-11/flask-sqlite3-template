@@ -232,12 +232,21 @@ def range_user_image():
     ---
     tags:
       - user
+    parameters:
+      - in: header
+        name: Authorization
+        type: string
+        required: true
+        description: 授权凭证
     responses:
       200:
         description: 成功
     """
+    data = validate_token()
+    if isinstance(data, tuple):
+        return data  # 返回错误响应
     image_dir = os.path.join(os.getcwd(), "static/user/images/")
-    images = [f"/static/user/images/{img}" for img in os.listdir(image_dir)]
+    images = [f"{BaseConfig.SERVER_NAME}/static/user/images/{img}" for img in os.listdir(image_dir)]
     if not images:
         return make_response(404, "没有可用的图像")
     return make_response(200, "成功", random.choice(images))
