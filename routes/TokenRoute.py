@@ -1,16 +1,10 @@
-"""
-@ Date: 2024-04-29 16:08:39
-@ LastEditors: sky
-@ LastEditTime: 2024-05-08 10:10:38
-@ FilePath: /SkyTunnel/app/routes/TokenRoute.py
-@ Desc: 
-"""
-
 from public.user.auth import *
-from flask import request, jsonify,send_file
-from db import User,db
-from run import app
+from flask import request, jsonify
+from db import User
 
+from utils.tools import with_app_context,make_response
+
+@with_app_context
 def get_token():
     """
     生成授权凭证
@@ -50,13 +44,13 @@ def get_token():
     exp = json_data.get('exp')
     
     if not username or not password:
-        return jsonify({'msg': '用户名和密码不能为空', 'code': 400}), 400
-    with app.app_context():
-      user = User.query.filter_by(username=username).first()
-      if not user:
-        return jsonify({"code": 404, "msg": "用户不存在"}), 404
-      if not user.verify_password(password):
-        return jsonify({"code": 405, "msg": "密码错误"}), 405
+        return make_response(400, "用户名和密码不能为空")
 
-      encoded_jwt = generate_token(username, password, exp) if exp else generate_token(username, password)
-      return jsonify({'msg': {'token':encoded_jwt},'code':200})
+    user = User.query.filter_by(username=username).first()
+    if not user:
+      return make_response(404, "用户不存在")
+    if not user.verify_password(password):
+      return make_response(405, "密码错误")
+
+    encoded_jwt = generate_token(username, password, exp) if exp else generate_token(username, password)
+    return make_response(200, "密码错误",{'token':encoded_jwt})

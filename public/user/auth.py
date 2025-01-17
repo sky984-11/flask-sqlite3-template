@@ -2,15 +2,16 @@
 Description: 
 Author: liupeng
 Date: 2025-01-16 17:47:07
-LastEditTime: 2025-01-17 09:58:07
+LastEditTime: 2025-01-17 10:05:30
 LastEditors: liupeng
 '''
 import jwt
 from datetime import datetime, timedelta
- 
+from config import  BaseConfig
 
-# 密钥应该是保存在安全的地方，而不是直接硬编码在代码中
-SECRET_KEY = "SkyTunnel"  # 替换为你自己的密钥
+
+
+SECRET_KEY = BaseConfig.SECRET_KEY
 
 
 def generate_token(username,password,exp=3600):

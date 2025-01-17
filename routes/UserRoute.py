@@ -1,17 +1,33 @@
-from flask import request, jsonify,send_file
+from flask import request
 from db import User,db
-from run import app
-from public.user.auth import *
-
-from config import  ProductionConfig
-
+from public.user.auth import generate_token, decode_token
+from config import  BaseConfig
+from utils.tools import with_app_context,make_response
 import random
 import os
 import datetime
-from utils.tools import with_app_context,paginate
 
 
+def validate_token():
+    token = request.headers.get("Authorization")
+    if not token:
+        return make_response(401, "token未授权或过期")
+    data = decode_token(token)
+    if "error" in data:
+        return make_response(401, "token未授权或过期")
+    return data
 
+def get_user_by_username(username):
+    return User.query.filter_by(username=username).first()
+
+def register_user(username, password, avatar):
+    new_user = User(username=username, role="user", utime=datetime.datetime.now(), avatar=avatar)
+    new_user.hash_password(password)
+    db.session.add(new_user)
+    db.session.commit()
+    return new_user
+
+@with_app_context
 def register():
     """
     用户注册
@@ -46,18 +62,14 @@ def register():
     avatar = request.form.get("avatar")
 
     if not username or not password:
-        return jsonify({"code": 400, "msg": "用户名和密码不能为空"}), 400
+        return make_response(400, "用户名和密码不能为空")
+    if get_user_by_username(username):
+        return make_response(401, "用户名已存在,请勿重复注册")
 
-    with app.app_context():
-        existing_user = User.query.filter_by(username=username).first()
-        if existing_user:
-            return jsonify({"code": 401, "msg": "用户名已存在,请勿重复注册"}), 401
-        new_user = User(username=username, role="user", utime=datetime.datetime.now(),avatar=avatar)
-        new_user.hash_password(password)
-        db.session.add(new_user)
-        db.session.commit()
-        return jsonify({"code": 200, "msg": "注册成功"})
+    register_user(username, password, avatar)
+    return make_response(200, "注册成功")
 
+@with_app_context
 def login():
     """
     用户登陆
@@ -89,29 +101,21 @@ def login():
       402:
         description: 密码错误
     """
-
     username = request.form.get("username")
     password = request.form.get("password")
 
     if not username or not password:
-        return jsonify({"code": 400, "msg": "用户名和密码不能为空"}), 400
+        return make_response(400, "用户名和密码不能为空")
 
-    with app.app_context():
-        user = User.query.filter_by(username=username).first()
-        if not user:
-            return jsonify({"code": 401, "msg": "未找到该用户"}), 401
-        if user.verify_password(password):
-            encoded_jwt = generate_token(username, password)
-            response = {
-                "code": 200,
-                "msg": "登录成功",
-                "token": encoded_jwt,
-                "user_id": user.user_id
-            }
-            return jsonify(response)
-        else:
-            return jsonify({"code": 402, "msg": "密码错误"}), 402
+    user = get_user_by_username(username)
+    if not user:
+        return make_response(401, "未找到该用户")
+    if user.verify_password(password):
+        token = generate_token(username, password)
+        return make_response(200, "登录成功", {"token": token, "user_id": user.user_id})
+    return make_response(402, "密码错误")
 
+@with_app_context
 def change_password():
     """
     修改用户密码
@@ -144,25 +148,24 @@ def change_password():
       402:
         description: 密码错误
     """
-    username = request.form.get('username')
-    old_password = request.form.get('old_password')
-    new_password = request.form.get('new_password')
+    username = request.form.get("username")
+    old_password = request.form.get("old_password")
+    new_password = request.form.get("new_password")
 
     if not username or not old_password or not new_password:
-        return jsonify({"code": 400, "msg": "用户名和密码不能为空"}), 400
+        return make_response(400, "用户名和密码不能为空")
 
-    with app.app_context():
-        user = User.query.filter_by(username=username).first()
-        if not user:
-            return jsonify({"code": 401, "msg": "未找到该用户"}), 401
-        if not user.verify_password(old_password):
-            return jsonify({"code": 402, "msg": "密码输入错误"}), 402
-            
-        user.hash_password(new_password)
-        db.session.commit()
-        db.session.close()
-        return jsonify({'msg': '修改成功', 'code': 200})
+    user = get_user_by_username(username)
+    if not user:
+        return make_response(401, "未找到该用户")
+    if not user.verify_password(old_password):
+        return make_response(402, "密码错误")
 
+    user.hash_password(new_password)
+    db.session.commit()
+    return make_response(200, "修改成功")
+
+@with_app_context
 def delete_user(user_id):
     """
     用户注销
@@ -192,33 +195,23 @@ def delete_user(user_id):
       500:
         description: 服务端错误
     """
-    token = request.headers.get('Authorization')
+    data = validate_token()
+    if isinstance(data, tuple):
+        return data  # 返回错误响应
 
-    if not token:
-        return jsonify({'msg': 'token未授权或过期','code':401}),401
+    user = User.query.filter_by(user_id=user_id).first()
+    if not user:
+        return make_response(404, "未找到该用户")
+    if user_id != data["user_id"]:
+        return make_response(411, "要删除的用户不属于该授权凭证")
 
-    data = decode_token(token)
-    if 'error' in data:
-        return jsonify({'msg': 'token未授权或过期','code':401}),401
-
-
-    with app.app_context():
-        try:
-            # 级联用户将删除所有用户关联的数据
-            user = User.query.filter_by(user_id=user_id).first()
-            if not user:
-              return jsonify({"code": 401, "msg": "未找到该用户"}), 404
-
-            if user_id != user.user_id:
-              return jsonify({"code": 411, "msg": "要删除的用户不属于该授权凭证"}), 411
-
-            db.session.delete(user)
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({"code": 500, "msg": str(e)}), 500
-
-        return jsonify({"code": 200, "msg": f"用户注销成功"})
+    try:
+        db.session.delete(user)
+        db.session.commit()
+        return make_response(200, "用户注销成功")
+    except Exception as e:
+        db.session.rollback()
+        return make_response(500, f"服务端错误: {str(e)}")
 
 def logout():
     """
@@ -230,15 +223,12 @@ def logout():
       200:
         description: 成功
     """
-    response = {
-        'code':200,'msg': 'logout success'
-    }
-    return jsonify(response)
+    return make_response(200, "退出成功")
 
 
 def range_user_image():
     """
-    发送一个随机图像
+    获取用户随机图像
     ---
     tags:
       - user
@@ -246,15 +236,13 @@ def range_user_image():
       200:
         description: 成功
     """
+    image_dir = os.path.join(os.getcwd(), "static/user/images/")
+    images = [f"/static/user/images/{img}" for img in os.listdir(image_dir)]
+    if not images:
+        return make_response(404, "没有可用的图像")
+    return make_response(200, "成功", random.choice(images))
 
-    IMAGE_URL = '/static/user/images'
-    fileList = []
-    user_image_path = os.getcwd() + '/static/user/images/'
-    for root, dirs, files in os.walk(user_image_path):
-        for image in files:
-            fileList.append(IMAGE_URL + '/' + image)
-    return jsonify({'msg': random.choice(fileList),'code':200})
-
+@with_app_context
 def select_user_info():
     """
     用户信息查询
@@ -275,50 +263,38 @@ def select_user_info():
       404:
         description: 用户名不存在
     """
-    token = request.headers.get('Authorization')
+    data = validate_token()
+    if isinstance(data, tuple):
+        return data
 
+    user = get_user_by_username(data.get("username"))
+    if not user:
+        return make_response(404, "用户名不存在")
 
-    if not token:
-        return jsonify({'msg': 'token未授权或过期','code':401}),401
-
-    data = decode_token(token)
-    if 'error' in data:
-        return jsonify({'msg': 'token未授权或过期','code':401}),401
-
-    with app.app_context():
-        user = User.query.filter_by(username=data.get('username')).first()
-        if not user:
-            return jsonify({"code": 404, "msg": "用户名不存在"}), 404
-        data = {
-            "user_id": user.user_id,
-            "username": user.username,
-            "nickname": user.nickname,
-            "avatar": user.avatar,
-            "qq": user.qq,
-            "role": user.role,
-            "ctime": user.ctime.strftime("%Y年%m月%d日 %H:%M:%S"),
-            "utime": user.utime.strftime("%Y年%m月%d日 %H:%M:%S"),
-        }
-        response = {
-        'msg': data,
-        'code':200
-        }
-        return jsonify(data)
-
+    user_info = {
+        "user_id": user.user_id,
+        "username": user.username,
+        "nickname": user.nickname,
+        "avatar": user.avatar,
+        "qq": user.qq,
+        "role": user.role,
+        "ctime": user.ctime.strftime("%Y-%m-%d %H:%M:%S"),
+        "utime": user.utime.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    return make_response(200, "成功", user_info)
 
 def upload_image():
     """上传用户头像"""
-    imgBase64 = request.files.get('file')
-    # 图片的md5格式
-    md5 = request.form.get('md5')
-    name = md5 + '.' + imgBase64.filename.split('.')[1]
-    imgBase64.save(fr'./static/user/upload/{name}')
+    img_file = request.files.get("file")
+    md5 = request.form.get("md5")
+    if not img_file or not md5:
+        return make_response(400, "缺少文件或MD5值")
 
-    IMAGE_URL = 'http://' + ProductionConfig.IMAGE_SERVER + \
-            f'/static/user/upload/{name}'
-    response = {
-        'msg': {'url': IMAGE_URL},
-        'code':200
-    }
-    return jsonify(response)
+    ext = os.path.splitext(img_file.filename)[1]
+    filename = f"{md5}{ext}"
+    save_path = os.path.join("./static/user/upload/", filename)
+    img_file.save(save_path)
+
+    image_url = f"http://{BaseConfig.IMAGE_SERVER}/static/user/upload/{filename}"
+    return make_response(200, "成功", {"url": image_url})
 

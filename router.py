@@ -2,7 +2,7 @@
 Description: 
 Author: liupeng
 Date: 2025-01-16 17:47:07
-LastEditTime: 2025-01-17 09:27:45
+LastEditTime: 2025-01-17 10:16:56
 LastEditors: liupeng
 '''
 
@@ -12,7 +12,7 @@ from flask_cors import CORS
 from flask import Blueprint
 
 from routes.UserRoute import *
-
+from routes.TokenRoute import *
 
 from config import BaseConfig
 
@@ -22,7 +22,10 @@ b1 = Blueprint('b1', __name__)
 # 解决跨域问题
 CORS(b1)
 
-
+##################################### Token start #####################################
+#  生成授权凭证
+b1.route(f'/api/{BaseConfig.API_VERSION}/token', methods=['POST'])(get_token)
+##################################### Token start #####################################
 
 
 ##################################### User start #####################################
@@ -34,8 +37,6 @@ b1.route(f'/api/{BaseConfig.API_VERSION}/user/login', methods=['POST'])(login)
 b1.route(f'/api/{BaseConfig.API_VERSION}/user/password/change', methods=['POST'])(change_password)
 # 用户注销
 b1.route(f'/api/{BaseConfig.API_VERSION}/user/del/<int:user_id>', methods=['DELETE'])(delete_user)
-# 用户退出
-b1.route(f'/api/{BaseConfig.API_VERSION}/user/logout', methods=['GET'])(logout)
 # 用户随机头像
 b1.route(f'/api/{BaseConfig.API_VERSION}/user/image/random', methods=['GET'])(range_user_image)
 # 查询某个用户信息

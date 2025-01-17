@@ -2,7 +2,7 @@
 Description: 
 Author: liupeng
 Date: 2025-01-16 17:47:07
-LastEditTime: 2025-01-17 09:53:24
+LastEditTime: 2025-01-17 10:00:25
 LastEditors: liupeng
 '''
 
@@ -31,6 +31,4 @@ class DevelopmentConfig(BaseConfig):
     DEBUG = True
     # 启用 SQLAlchemy 的自动提交
     SQLALCHEMY_ECHO = True  # 输出 SQL 查询语句，便于调试
-    # 配置 Flask 使用调试模式
-    ENV = "development"
 
