@@ -42,6 +42,8 @@ python3 run.py
 
 访问自动生成的 API 文档：
 [http://127.0.0.1:5000/apidocs/](http://127.0.0.1:5000/apidocs/)
+![image](https://github.com/user-attachments/assets/5d882e88-0427-4898-9eb5-5e33947fe880)
+
 
 ## 文件结构说明
 
