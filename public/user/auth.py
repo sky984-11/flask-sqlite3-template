@@ -1,14 +1,10 @@
-"""
-@ Date: 2024-04-26 16:54:11
-@ LastEditors: sky
-@ LastEditTime: 2024-05-08 10:10:01
-@ FilePath: /SkyTunnel/app/public/user/auth.py
-@ Desc: 
-"""
-
-
-import base64
- 
+'''
+Description: 
+Author: liupeng
+Date: 2025-01-16 17:47:07
+LastEditTime: 2025-01-17 09:58:07
+LastEditors: liupeng
+'''
 import jwt
 from datetime import datetime, timedelta
  
@@ -56,7 +52,7 @@ def is_token_expired(decoded_token):
 
 
 if __name__ == '__main__':
-    encoded_jwt = generate_token('sky','lp640529.')
+    encoded_jwt = generate_token('sky','123456')
     print(encoded_jwt)
 
     # 这里使用生成的 token 进行解码示例

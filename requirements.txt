@@ -6,4 +6,3 @@ passlib
 PyJWT
 SQLAlchemy
 python-dotenv
-flask_login
