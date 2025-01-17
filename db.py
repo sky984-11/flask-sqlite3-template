@@ -38,7 +38,7 @@ class User(BaseModel):
         用户表
         user_id:主键，自动递增的整数。
         username:登陆账户，可以为手机号或者邮箱
-        password:md5密码加密字符串
+        password:密码
         nickname:用户昵称，可为空。
         avatar:用户头像的文件名称。可为空。
         qq:用户的QQ号码,可为空。
@@ -51,7 +51,7 @@ class User(BaseModel):
     __table_args__ = {'extend_existing': True}
     # nullable是否为空，unique唯一约束
     user_id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(20), nullable=True, unique=True)
+    username = db.Column(db.String(20), nullable=False, unique=True)
     password = db.Column(db.String(150), nullable=True)
     nickname = db.Column(db.String(50), nullable=True)
     avatar = db.Column(db.String(50), nullable=True)
