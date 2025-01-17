@@ -27,6 +27,7 @@ def get_token():
               required: true
             exp:
               type: number
+              default: 3600
               description: 过期时间
     responses:
       200:
